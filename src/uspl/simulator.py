@@ -9,7 +9,14 @@ import pandas as pd
 
 
 MechanismName = Literal["fixed", "twap", "buffer", "uspl"]
-ScenarioName = Literal["normal", "drawdown", "flash_crash"]
+ScenarioName = Literal[
+    "normal",
+    "drawdown",
+    "flash_crash",
+    "real_normal",
+    "real_drawdown",
+    "counterfactual_oracle_shock",
+]
 
 
 class Zone(str, Enum):
@@ -38,10 +45,15 @@ class SimulationConfig:
     buffer_threshold: float = 1.04
     cap_min: float = 0.05
     cap_max: float = 0.50
-    gamma: float = 1.0
+    gamma: float = 2.0
     use_dynamic_uncertainty: bool = True
     deviation_sensitivity: float = 0.45
     volatility_sensitivity: float = 2.0
+    use_adaptive_close_factor: bool = True
+    false_loss_budget_rate: float = 0.005
+    use_piecewise_close_factor: bool = True
+    curve_low_uncertainty: float = 0.15
+    curve_high_uncertainty: float = 0.20
 
 
 @dataclass(frozen=True)
@@ -144,17 +156,168 @@ def uncertainty_width_path(
     ).to_numpy()
 
 
+def uncertainty_scaled_close_cap(
+    uncertainty_intensity: float,
+    config: SimulationConfig,
+) -> float:
+    """Map oracle uncertainty into a capped close factor.
+
+    The default implementation uses an auditable piecewise-linear curve. It
+    preserves the old linear rule as a fallback, but the piecewise curve is a
+    better approximation of an offline-calibrated close-factor table: medium
+    uncertainty still allows meaningful liquidation, while high uncertainty
+    sharply limits liquidation intensity.
+    """
+    if not config.use_piecewise_close_factor:
+        return float(
+            np.clip(
+                config.cap_max - config.gamma * uncertainty_intensity,
+                config.cap_min,
+                config.cap_max,
+            )
+        )
+
+    low = config.curve_low_uncertainty
+    high = config.curve_high_uncertainty
+    if high <= low:
+        raise ValueError("curve_high_uncertainty must be greater than curve_low_uncertainty")
+
+    high_uncertainty_cap = float(
+        np.clip(
+            config.cap_max - config.gamma * high,
+            config.cap_min,
+            config.cap_max,
+        )
+    )
+
+    if uncertainty_intensity <= low:
+        cap = config.cap_max
+    elif uncertainty_intensity >= high:
+        cap = high_uncertainty_cap
+    else:
+        slope = (config.cap_max - high_uncertainty_cap) / (high - low)
+        cap = config.cap_max - slope * (uncertainty_intensity - low)
+
+    return float(np.clip(cap, config.cap_min, config.cap_max))
+
+
+def adaptive_close_factor_components(
+    collateral_eth: float,
+    debt_usdc: float,
+    oracle_price: float,
+    price_low: float,
+    hf_min: float,
+    hf_max: float,
+    config: SimulationConfig,
+    account: AccountConfig,
+) -> dict[str, float]:
+    """Closed-form close factor from solvency need and false-liquidation budget.
+
+    The uncertainty-zone liquidation problem has two interpretable bounds:
+
+    1. c_solv: minimum close factor that would restore HF_min to 1 after
+       liquidation under the lower-bound oracle price.
+    2. c_user: maximum close factor allowed by a false-liquidation loss budget.
+
+    The risk probability pi is approximated by the share of the HF interval below
+    the liquidation boundary under a uniform interval assumption. The final close
+    factor interpolates between c_user and c_solv, so low-risk boundary states
+    protect the borrower while high-risk states move toward solvency protection.
+    """
+    if debt_usdc <= 0:
+        return {
+            "unsafe_probability": 0.0,
+            "solvency_close_cap": 0.0,
+            "user_close_cap": 0.0,
+            "adaptive_close_cap": 0.0,
+        }
+
+    hf_width = max(hf_max - hf_min, 1e-9)
+    unsafe_probability = float(np.clip((1.0 - hf_min) / hf_width, 0.0, 1.0))
+
+    lower_bound_collateral_value = (
+        collateral_eth * price_low * account.liquidation_threshold
+    )
+    denominator = debt_usdc * (
+        1.0
+        - (1.0 + account.liquidation_bonus)
+        * price_low
+        * account.liquidation_threshold
+        / max(oracle_price, 1e-9)
+    )
+    if denominator <= 0:
+        solvency_close_cap = config.cap_max
+    else:
+        solvency_close_cap = (debt_usdc - lower_bound_collateral_value) / denominator
+    solvency_close_cap = float(np.clip(solvency_close_cap, 0.0, config.cap_max))
+
+    expected_false_state = max(1.0 - unsafe_probability, 1e-6)
+    false_loss_budget = config.false_loss_budget_rate * debt_usdc
+    user_close_cap = false_loss_budget / (
+        expected_false_state * debt_usdc * account.liquidation_bonus
+    )
+    user_close_cap = float(np.clip(user_close_cap, config.cap_min, config.cap_max))
+
+    cap = (
+        unsafe_probability * solvency_close_cap
+        + (1.0 - unsafe_probability) * user_close_cap
+    )
+    adaptive_close_cap = float(np.clip(cap, config.cap_min, config.cap_max))
+    return {
+        "unsafe_probability": unsafe_probability,
+        "solvency_close_cap": solvency_close_cap,
+        "user_close_cap": user_close_cap,
+        "adaptive_close_cap": adaptive_close_cap,
+    }
+
+
+def adaptive_uncertainty_close_cap(
+    collateral_eth: float,
+    debt_usdc: float,
+    oracle_price: float,
+    price_low: float,
+    hf_min: float,
+    hf_max: float,
+    config: SimulationConfig,
+    account: AccountConfig,
+) -> float:
+    return adaptive_close_factor_components(
+        collateral_eth,
+        debt_usdc,
+        oracle_price,
+        price_low,
+        hf_min,
+        hf_max,
+        config,
+        account,
+    )["adaptive_close_cap"]
+
+
 def simulate(
     scenario: ScenarioName,
     mechanism: MechanismName,
     config: SimulationConfig | None = None,
     account: AccountConfig | None = None,
+    market_prices: np.ndarray | None = None,
+    raw_oracle_prices: np.ndarray | None = None,
 ) -> SimulationResult:
     config = config or SimulationConfig()
     account = account or AccountConfig()
 
-    market = generate_market_price_path(scenario, config, account)
-    raw_oracle = delayed_oracle_path(market, config.oracle_delay)
+    if market_prices is None:
+        market = generate_market_price_path(scenario, config, account)
+    else:
+        market = np.asarray(market_prices, dtype=float)
+        if len(market) == 0:
+            raise ValueError("market_prices must not be empty")
+
+    if raw_oracle_prices is None:
+        raw_oracle = delayed_oracle_path(market, config.oracle_delay)
+    else:
+        raw_oracle = np.asarray(raw_oracle_prices, dtype=float)
+        if len(raw_oracle) != len(market):
+            raise ValueError("raw_oracle_prices must have the same length as market_prices")
+
     oracle = twap_path(raw_oracle, config.twap_window) if mechanism == "twap" else raw_oracle
     uncertainty_widths = uncertainty_width_path(raw_oracle, config)
 
@@ -190,6 +353,12 @@ def simulate(
         zone = Zone.SAFE
         close_cap = 0.0
         should_liquidate = False
+        adaptive_components = {
+            "unsafe_probability": np.nan,
+            "solvency_close_cap": np.nan,
+            "user_close_cap": np.nan,
+            "adaptive_close_cap": np.nan,
+        }
 
         if mechanism == "fixed" or mechanism == "twap":
             should_liquidate = oracle_hf < 1
@@ -210,13 +379,23 @@ def simulate(
                 close_cap = config.cap_max
             else:
                 zone = Zone.UNCERTAIN
-                close_cap = float(
-                    np.clip(
-                        config.cap_max - config.gamma * uncertainty_intensity,
-                        config.cap_min,
-                        config.cap_max,
+                if config.use_adaptive_close_factor:
+                    adaptive_components = adaptive_close_factor_components(
+                        collateral,
+                        debt,
+                        oracle_price,
+                        price_low,
+                        hf_min,
+                        hf_max,
+                        config,
+                        account,
                     )
-                )
+                    close_cap = adaptive_components["adaptive_close_cap"]
+                else:
+                    close_cap = uncertainty_scaled_close_cap(
+                        uncertainty_intensity,
+                        config,
+                    )
             should_liquidate = close_cap > 0
 
         else:
@@ -264,6 +443,7 @@ def simulate(
                 "hf_max": hf_max,
                 "uncertainty_intensity": uncertainty_intensity,
                 "uncertainty_width": current_uncertainty_width,
+                **adaptive_components,
                 "zone": zone.value,
                 "close_cap": close_cap,
                 "collateral_eth": collateral,
@@ -293,10 +473,18 @@ def simulate(
     )
 
     positive_bad_debt = path.loc[path["bad_debt"] > 0, "bad_debt"]
+    positive_bad_debt_sorted = positive_bad_debt.sort_values(ascending=False)
+    es_count = max(1, int(np.ceil(0.05 * len(path))))
+    bad_debt_es95 = (
+        float(positive_bad_debt_sorted.head(es_count).mean())
+        if len(positive_bad_debt_sorted)
+        else 0.0
+    )
 
     metrics = {
         "bad_debt_rate": bad_debt_steps / len(path),
         "max_bad_debt": float(path["bad_debt"].max()),
+        "bad_debt_es95": bad_debt_es95,
         "avg_bad_debt": float(positive_bad_debt.mean()) if len(positive_bad_debt) else 0.0,
         "false_liquidation_count": int(path["false_liquidation"].sum()),
         "false_liquidation_loss": float(path["false_liquidation_loss"].sum()),
@@ -321,9 +509,21 @@ def compare_mechanisms(
     scenario: ScenarioName,
     config: SimulationConfig | None = None,
     account: AccountConfig | None = None,
+    market_prices: np.ndarray | None = None,
+    raw_oracle_prices: np.ndarray | None = None,
 ) -> tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
     mechanisms: list[MechanismName] = ["fixed", "twap", "buffer", "uspl"]
-    results = [simulate(scenario, mechanism, config, account) for mechanism in mechanisms]
+    results = [
+        simulate(
+            scenario,
+            mechanism,
+            config,
+            account,
+            market_prices=market_prices,
+            raw_oracle_prices=raw_oracle_prices,
+        )
+        for mechanism in mechanisms
+    ]
     metrics = pd.DataFrame(
         [{"scenario": r.scenario, "mechanism": r.mechanism, **r.metrics} for r in results]
     )

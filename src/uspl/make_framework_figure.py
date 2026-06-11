@@ -126,7 +126,7 @@ def main() -> None:
         (0.72, 0.54),
         0.23,
         0.10,
-        "Uncertainty zone\n$cap_t = clip(cap_{max} - \\gamma U_t)$",
+        "Uncertainty zone\n$cap_t = f(\\pi_t,c_{solv},c_{user})$",
         colors["action"],
     )
     add_box(

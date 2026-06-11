@@ -19,3 +19,8 @@ dist/
 build/
 
 *.log
+
+# Local render/check artifacts
+qa_render*/
+outputs/manual-test/
+outputs/[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]-*/

@@ -16,7 +16,7 @@ def run_sensitivity() -> pd.DataFrame:
 
     for scenario in scenarios:
         for gamma in gammas:
-            config = SimulationConfig(gamma=gamma)
+            config = SimulationConfig(gamma=gamma, use_adaptive_close_factor=False)
             result = simulate(scenario, "uspl", config=config, account=account)
             rows.append(
                 {

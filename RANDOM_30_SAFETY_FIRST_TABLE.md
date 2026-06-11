@@ -1,0 +1,57 @@
+# 30 个固定随机窗口 Safety-first ε-constraint 评价表
+
+评价顺序：先用 `max_bad_debt = 0` 且 `bad_debt_es95 = 0` 进行偿付安全筛选；未通过者标记为 `excluded`，不进入该窗口的综合排序。对通过筛选的机制，再用误清算损失、总用户损失、清算延迟、清算次数计算可行集内 TOPSIS。
+
+## normal
+
+| 窗口 | 日期 | 价格变化 | 最大回撤 | fixed | TWAP | buffer | USPL | 筛选后选择 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| random_normal_01 | 2026-03-15 至 2026-05-25 | 0.08% | -15.65% | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | fixed |
+| random_normal_02 | 2026-03-23 至 2026-06-02 | -2.42% | -17.25% | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | fixed |
+| random_normal_03 | 2026-03-11 至 2026-05-21 | 4.52% | -15.65% | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | fixed |
+| random_normal_04 | 2025-11-19 至 2026-01-29 | -3.54% | -16.16% | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=2.0 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=2.0 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=2.0 | pass; ES=0.00; FL=23.96; UL=23.96; LC=2; score=0.000; rank=4.0 | fixed |
+| random_normal_05 | 2026-03-22 至 2026-06-01 | -3.56% | -17.23% | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | fixed |
+| random_normal_06 | 2026-03-14 至 2026-05-24 | 1.08% | -15.65% | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | fixed |
+| random_normal_07 | 2026-03-13 至 2026-05-23 | -0.58% | -15.65% | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | fixed |
+| random_normal_08 | 2026-03-16 至 2026-05-26 | -2.94% | -15.65% | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=2.0 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=2.0 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=2.0 | pass; ES=0.00; FL=8.43; UL=8.43; LC=1; score=0.000; rank=4.0 | fixed |
+| random_normal_09 | 2025-11-18 至 2026-01-28 | -0.01% | -16.16% | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=2.0 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=2.0 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=2.0 | pass; ES=0.00; FL=19.51; UL=19.51; LC=2; score=0.000; rank=4.0 | fixed |
+| random_normal_10 | 2026-03-12 至 2026-05-22 | 3.90% | -15.65% | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=0.000; rank=2.5 | fixed |
+
+## drawdown
+
+| 窗口 | 日期 | 价格变化 | 最大回撤 | fixed | TWAP | buffer | USPL | 筛选后选择 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| random_drawdown_01 | 2026-01-20 至 2026-04-01 | -33.93% | -42.85% | excluded; ES=131.73; FL=0.00; UL=101.53; LC=57; score=-; rank=- | excluded; ES=350.81; FL=0.00; UL=91.15; LC=55; score=-; rank=- | excluded; ES=33.96; FL=0.00; UL=106.39; LC=58; score=-; rank=- | excluded; ES=2.20; FL=27.32; UL=105.03; LC=10; score=-; rank=- |  |
+| random_drawdown_02 | 2025-12-15 至 2026-02-24 | -39.53% | -45.76% | excluded; ES=53.22; FL=0.00; UL=101.46; LC=21; score=-; rank=- | excluded; ES=264.05; FL=0.00; UL=91.47; LC=19; score=-; rank=- | excluded; ES=53.22; FL=0.00; UL=101.46; LC=21; score=-; rank=- | excluded; ES=0.59; FL=14.60; UL=99.82; LC=8; score=-; rank=- |  |
+| random_drawdown_03 | 2025-12-14 至 2026-02-23 | -37.27% | -45.76% | excluded; ES=85.73; FL=0.00; UL=101.49; LC=20; score=-; rank=- | excluded; ES=299.96; FL=0.00; UL=91.34; LC=18; score=-; rank=- | pass; ES=0.00; FL=3.30; UL=102.30; LC=5; score=0.489; rank=2.0 | pass; ES=0.00; FL=27.38; UL=99.63; LC=9; score=0.511; rank=1.0 | USPL |
+| random_drawdown_04 | 2025-10-11 至 2025-12-21 | -22.38% | -34.89% | pass; ES=0.00; FL=0.00; UL=97.52; LC=2; score=0.714; rank=1.0 | pass; ES=0.00; FL=0.00; UL=97.52; LC=2; score=0.534; rank=3.0 | pass; ES=0.00; FL=97.52; UL=97.52; LC=2; score=0.614; rank=2.0 | pass; ES=0.00; FL=92.84; UL=92.84; LC=9; score=0.472; rank=4.0 | fixed |
+| random_drawdown_05 | 2025-09-09 至 2025-11-19 | -27.67% | -35.84% | pass; ES=0.00; FL=36.52; UL=109.57; LC=2; score=0.623; rank=2.0 | pass; ES=0.00; FL=0.00; UL=73.05; LC=1; score=0.562; rank=3.0 | pass; ES=0.00; FL=73.05; UL=73.05; LC=1; score=0.682; rank=1.0 | pass; ES=0.00; FL=94.81; UL=94.81; LC=8; score=0.442; rank=4.0 | buffer |
+| random_drawdown_06 | 2025-09-17 至 2025-11-27 | -32.79% | -41.04% | pass; ES=0.00; FL=76.34; UL=114.52; LC=2; score=0.735; rank=1.0 | pass; ES=0.00; FL=0.00; UL=133.60; LC=3; score=0.506; rank=3.0 | pass; ES=0.00; FL=95.43; UL=133.60; LC=3; score=0.695; rank=2.0 | pass; ES=0.00; FL=129.28; UL=129.28; LC=13; score=0.479; rank=4.0 | fixed |
+| random_drawdown_07 | 2025-10-04 至 2025-12-14 | -31.01% | -41.04% | pass; ES=0.00; FL=95.67; UL=133.94; LC=3; score=0.672; rank=2.0 | pass; ES=0.00; FL=0.00; UL=143.51; LC=4; score=0.486; rank=4.0 | pass; ES=0.00; FL=95.67; UL=133.94; LC=3; score=0.679; rank=1.0 | pass; ES=0.00; FL=118.58; UL=129.86; LC=11; score=0.498; rank=3.0 | buffer |
+| random_drawdown_08 | 2025-09-16 至 2025-11-26 | -34.68% | -41.04% | pass; ES=0.00; FL=95.85; UL=134.19; LC=3; score=0.686; rank=2.0 | pass; ES=0.00; FL=0.00; UL=143.78; LC=4; score=0.485; rank=4.0 | pass; ES=0.00; FL=95.85; UL=134.19; LC=3; score=0.707; rank=1.0 | pass; ES=0.00; FL=130.37; UL=130.37; LC=13; score=0.502; rank=3.0 | buffer |
+| random_drawdown_09 | 2026-01-06 至 2026-03-18 | -28.19% | -45.76% | excluded; ES=60.50; FL=0.00; UL=106.48; LC=44; score=-; rank=- | excluded; ES=256.90; FL=0.00; UL=96.86; LC=42; score=-; rank=- | pass; ES=0.00; FL=68.40; UL=95.75; LC=3; score=0.636; rank=1.0 | pass; ES=0.00; FL=36.97; UL=105.85; LC=11; score=0.364; rank=2.0 | buffer |
+| random_drawdown_10 | 2025-11-01 至 2026-01-11 | -19.87% | -29.29% | pass; ES=0.00; FL=0.00; UL=97.81; LC=2; score=0.714; rank=1.0 | pass; ES=0.00; FL=0.00; UL=97.81; LC=2; score=0.534; rank=3.0 | pass; ES=0.00; FL=97.81; UL=97.81; LC=2; score=0.615; rank=2.0 | pass; ES=0.00; FL=93.75; UL=93.75; LC=9; score=0.472; rank=4.0 | fixed |
+
+## oracle shock
+
+| 窗口 | 日期 | 价格变化 | 最大回撤 | fixed | TWAP | buffer | USPL | 筛选后选择 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| random_oracle_shock_01 | 2026-03-15 至 2026-05-25 | 0.08% | -15.65% | pass; ES=0.00; FL=35.53; UL=35.53; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=1.0 | pass; ES=0.00; FL=35.53; UL=35.53; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=24.15; UL=24.15; LC=1; score=0.255; rank=2.0 | twap |
+| random_oracle_shock_02 | 2026-03-23 至 2026-06-02 | -2.42% | -17.25% | pass; ES=0.00; FL=34.80; UL=34.80; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=1.0 | pass; ES=0.00; FL=34.80; UL=34.80; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=21.74; UL=21.74; LC=1; score=0.297; rank=2.0 | twap |
+| random_oracle_shock_03 | 2026-03-11 至 2026-05-21 | 4.52% | -15.65% | pass; ES=0.00; FL=34.50; UL=34.50; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=1.0 | pass; ES=0.00; FL=34.50; UL=34.50; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=32.61; UL=32.61; LC=1; score=0.045; rank=2.0 | twap |
+| random_oracle_shock_04 | 2025-11-19 至 2026-01-29 | -3.54% | -16.16% | pass; ES=0.00; FL=52.83; UL=52.83; LC=1; score=0.435; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=1.0 | pass; ES=0.00; FL=52.83; UL=52.83; LC=1; score=0.435; rank=2.5 | pass; ES=0.00; FL=64.82; UL=64.82; LC=3; score=0.000; rank=4.0 | twap |
+| random_oracle_shock_05 | 2026-03-22 至 2026-06-01 | -3.56% | -17.23% | pass; ES=0.00; FL=35.22; UL=35.22; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=1.0 | pass; ES=0.00; FL=35.22; UL=35.22; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=23.57; UL=23.57; LC=1; score=0.263; rank=2.0 | twap |
+| random_oracle_shock_06 | 2026-03-14 至 2026-05-24 | 1.08% | -15.65% | pass; ES=0.00; FL=35.47; UL=35.47; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=1.0 | pass; ES=0.00; FL=35.47; UL=35.47; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=22.26; UL=22.26; LC=1; score=0.295; rank=2.0 | twap |
+| random_oracle_shock_07 | 2026-03-13 至 2026-05-23 | -0.58% | -15.65% | pass; ES=0.00; FL=35.20; UL=35.20; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=1.0 | pass; ES=0.00; FL=35.20; UL=35.20; LC=1; score=0.000; rank=3.5 | pass; ES=0.00; FL=24.31; UL=24.31; LC=1; score=0.247; rank=2.0 | twap |
+| random_oracle_shock_08 | 2026-03-16 至 2026-05-26 | -2.94% | -15.65% | pass; ES=0.00; FL=36.87; UL=36.87; LC=1; score=0.396; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=1.0 | pass; ES=0.00; FL=36.87; UL=36.87; LC=1; score=0.396; rank=2.5 | pass; ES=0.00; FL=29.79; UL=29.79; LC=3; score=0.127; rank=4.0 | twap |
+| random_oracle_shock_09 | 2025-11-18 至 2026-01-28 | -0.01% | -16.16% | pass; ES=0.00; FL=51.21; UL=51.21; LC=1; score=0.430; rank=2.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=1.0 | pass; ES=0.00; FL=51.21; UL=51.21; LC=1; score=0.430; rank=2.5 | pass; ES=0.00; FL=60.96; UL=60.96; LC=3; score=0.000; rank=4.0 | twap |
+| random_oracle_shock_10 | 2026-03-12 至 2026-05-22 | 3.90% | -15.65% | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=1.5 | pass; ES=0.00; FL=0.00; UL=0.00; LC=0; score=1.000; rank=1.5 | pass; ES=0.00; FL=34.78; UL=34.78; LC=1; score=0.000; rank=4.0 | pass; ES=0.00; FL=15.70; UL=15.70; LC=1; score=0.436; rank=3.0 | fixed |
+
+## 汇总
+
+| 机制 | 通过窗口数 | 排除窗口数 | 筛选后被选中次数 | 平均可行 TOPSIS | 平均可行排名 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| fixed | 26 | 4 | 14 | 0.3617 | 2.40 |
+| twap | 26 | 4 | 9 | 0.6195 | 2.08 |
+| buffer | 28 | 2 | 4 | 0.3349 | 2.43 |
+| USPL | 28 | 2 | 1 | 0.2038 | 2.91 |

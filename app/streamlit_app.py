@@ -23,18 +23,27 @@ with st.sidebar:
     oracle_delay = st.slider("Oracle delay", 0, 12, 3)
     base_uncertainty_width = st.slider("Base uncertainty width", 0.0, 0.10, 0.02, 0.005)
     uncertainty_width = st.slider("Max uncertainty width", 0.02, 0.20, 0.10, 0.005)
-    gamma = st.slider("Gamma", 0.0, 10.0, 1.0, 0.25)
+    gamma = st.slider("Fallback gamma", 0.0, 10.0, 2.0, 0.1)
+    false_loss_budget_rate = st.slider("False loss budget B", 0.0, 0.03, 0.005, 0.001)
     cap_min = st.slider("cap_min", 0.0, 0.30, 0.05, 0.01)
     cap_max = st.slider("cap_max", 0.10, 1.00, 0.50, 0.05)
+    curve_low_uncertainty = st.slider("q_low", 0.02, 0.30, 0.15, 0.01)
+    curve_high_uncertainty = st.slider("q_high", 0.03, 0.40, 0.20, 0.01)
     debt_usdc = st.slider("Debt USDC", 500, 2600, 1900, 50)
+
+if curve_high_uncertainty <= curve_low_uncertainty:
+    curve_high_uncertainty = curve_low_uncertainty + 0.01
 
 config = SimulationConfig(
     oracle_delay=oracle_delay,
     base_uncertainty_width=base_uncertainty_width,
     uncertainty_width=uncertainty_width,
     gamma=gamma,
+    false_loss_budget_rate=false_loss_budget_rate,
     cap_min=cap_min,
     cap_max=cap_max,
+    curve_low_uncertainty=curve_low_uncertainty,
+    curve_high_uncertainty=curve_high_uncertainty,
 )
 account = AccountConfig(debt_usdc=float(debt_usdc))
 
