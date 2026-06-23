@@ -45,15 +45,10 @@ class SimulationConfig:
     buffer_threshold: float = 1.04
     cap_min: float = 0.05
     cap_max: float = 0.50
-    gamma: float = 2.0
     use_dynamic_uncertainty: bool = True
     deviation_sensitivity: float = 0.45
     volatility_sensitivity: float = 2.0
-    use_adaptive_close_factor: bool = True
     false_loss_budget_rate: float = 0.005
-    use_piecewise_close_factor: bool = True
-    curve_low_uncertainty: float = 0.15
-    curve_high_uncertainty: float = 0.20
 
 
 @dataclass(frozen=True)
@@ -154,51 +149,6 @@ def uncertainty_width_path(
         lower=config.base_uncertainty_width,
         upper=config.uncertainty_width,
     ).to_numpy()
-
-
-def uncertainty_scaled_close_cap(
-    uncertainty_intensity: float,
-    config: SimulationConfig,
-) -> float:
-    """Map oracle uncertainty into a capped close factor.
-
-    The default implementation uses an auditable piecewise-linear curve. It
-    preserves the old linear rule as a fallback, but the piecewise curve is a
-    better approximation of an offline-calibrated close-factor table: medium
-    uncertainty still allows meaningful liquidation, while high uncertainty
-    sharply limits liquidation intensity.
-    """
-    if not config.use_piecewise_close_factor:
-        return float(
-            np.clip(
-                config.cap_max - config.gamma * uncertainty_intensity,
-                config.cap_min,
-                config.cap_max,
-            )
-        )
-
-    low = config.curve_low_uncertainty
-    high = config.curve_high_uncertainty
-    if high <= low:
-        raise ValueError("curve_high_uncertainty must be greater than curve_low_uncertainty")
-
-    high_uncertainty_cap = float(
-        np.clip(
-            config.cap_max - config.gamma * high,
-            config.cap_min,
-            config.cap_max,
-        )
-    )
-
-    if uncertainty_intensity <= low:
-        cap = config.cap_max
-    elif uncertainty_intensity >= high:
-        cap = high_uncertainty_cap
-    else:
-        slope = (config.cap_max - high_uncertainty_cap) / (high - low)
-        cap = config.cap_max - slope * (uncertainty_intensity - low)
-
-    return float(np.clip(cap, config.cap_min, config.cap_max))
 
 
 def adaptive_close_factor_components(
@@ -379,23 +329,17 @@ def simulate(
                 close_cap = config.cap_max
             else:
                 zone = Zone.UNCERTAIN
-                if config.use_adaptive_close_factor:
-                    adaptive_components = adaptive_close_factor_components(
-                        collateral,
-                        debt,
-                        oracle_price,
-                        price_low,
-                        hf_min,
-                        hf_max,
-                        config,
-                        account,
-                    )
-                    close_cap = adaptive_components["adaptive_close_cap"]
-                else:
-                    close_cap = uncertainty_scaled_close_cap(
-                        uncertainty_intensity,
-                        config,
-                    )
+                adaptive_components = adaptive_close_factor_components(
+                    collateral,
+                    debt,
+                    oracle_price,
+                    price_low,
+                    hf_min,
+                    hf_max,
+                    config,
+                    account,
+                )
+                close_cap = adaptive_components["adaptive_close_cap"]
             should_liquidate = close_cap > 0
 
         else:
