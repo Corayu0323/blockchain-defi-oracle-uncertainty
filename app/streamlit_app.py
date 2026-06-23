@@ -50,7 +50,7 @@ account = AccountConfig(debt_usdc=float(debt_usdc))
 metrics, paths = compare_mechanisms(scenario, config=config, account=account)
 
 st.subheader("Mechanism Metrics")
-st.dataframe(metrics.round(4), width="stretch")
+st.dataframe(metrics.round(4), use_container_width=True)
 
 uspl = paths["uspl"]
 
@@ -83,7 +83,7 @@ zone_view = uspl[
         "bad_debt",
     ]
 ]
-st.dataframe(zone_view.round(4), width="stretch")
+st.dataframe(zone_view.round(4), use_container_width=True)
 
 st.subheader("All Mechanism Paths")
 combined = pd.concat(paths.values(), ignore_index=True)
@@ -103,5 +103,5 @@ st.dataframe(
             "user_loss",
         ]
     ].round(4),
-    width="stretch",
+    use_container_width=True,
 )
