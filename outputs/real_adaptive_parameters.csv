@@ -1,2 +1,0 @@
-target_initial_health_factor,oracle_shock_ratio,use_adaptive_close_factor,false_loss_budget_rate,cap_min,cap_max,curve_low_uncertainty,curve_high_uncertainty
-1.18,0.75,True,0.005,0.05,0.5,0.15,0.2

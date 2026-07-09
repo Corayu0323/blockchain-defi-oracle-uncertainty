@@ -4,7 +4,7 @@ This project supports the course report:
 
 **预言机不确定性下 DeFi 抵押借贷清算机制的风险权衡与改进研究**
 
-It contains a lightweight Python simulator, a Streamlit demo, and Solidity contract drafts for a simplified oracle-driven lending protocol.
+It contains an off-chain Python risk engine/simulator, a Streamlit demo, and Solidity contract drafts for the on-chain execution layer of an oracle-driven lending mechanism.
 
 ## Project Structure
 
@@ -83,7 +83,7 @@ streamlit run app/streamlit_app.py
 - `fixed`: fixed-threshold liquidation based on point oracle price.
 - `twap`: simple moving-average price filtering.
 - `buffer`: conservative safety-buffer threshold.
-- `uspl`: uncertainty-scaled partial liquidation with an adaptive close factor; the piecewise curve remains as a fallback for sensitivity analysis.
+- `uspl`: uncertainty-scaled partial liquidation with an adaptive close factor.
 
 ## USPL Rule
 
@@ -106,6 +106,15 @@ else:
 
 The simulator is intentionally stylized. It is designed for mechanism analysis and reproducible comparison, not for real trading or production DeFi deployment.
 
+## Off-Chain / On-Chain Split
+
+The Python simulator and the Solidity draft are not substitutes for the same component. They represent two layers of the same engineering design:
+
+- Python/off-chain risk engine: computes dynamic uncertainty widths, replays historical paths, runs stress tests, and calibrates governance parameters.
+- Solidity/on-chain execution layer: stores governance parameters, represents the price and health-factor intervals, classifies account zones, and executes the verifiable close-factor rule.
+
+In `SimpleLendingUSPL.sol`, `uncertaintyWidthWad` should be read as the on-chain representation of an off-chain risk estimate or governance risk parameter. This keeps gas-heavy rolling statistics and scenario analysis off-chain while the contract uses fixed-point on-chain execution for the USPL close-factor rule with a constant number of arithmetic and clipping operations.
+
 ## Default Demo Parameters
 
 The current defaults are chosen for course-report interpretability:
@@ -116,7 +125,6 @@ The current defaults are chosen for course-report interpretability:
 - max uncertainty width: `10%`
 - liquidation cap range: `cap_min = 5%`, `cap_max = 50%`
 - adaptive false-liquidation loss budget: `B = 0.005`
-- piecewise curve thresholds: `q_low = 0.15`, `q_high = 0.20`
 
 These defaults are not claimed to be optimal. They are used to make the main trade-off visible:
 

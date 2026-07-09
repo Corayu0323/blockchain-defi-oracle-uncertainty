@@ -438,12 +438,9 @@ def main() -> None:
             {
                 "target_initial_health_factor": target_hf,
                 "oracle_shock_ratio": shock_ratio,
-                "use_adaptive_close_factor": config.use_adaptive_close_factor,
                 "false_loss_budget_rate": config.false_loss_budget_rate,
                 "cap_min": config.cap_min,
                 "cap_max": config.cap_max,
-                "curve_low_uncertainty": config.curve_low_uncertainty,
-                "curve_high_uncertainty": config.curve_high_uncertainty,
             }
         ]
     ).to_csv(output_dir / "real_adaptive_parameters.csv", index=False)

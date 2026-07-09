@@ -20,7 +20,17 @@ build/
 
 *.log
 
+# Generated data, figures, and submission artifacts
+data/
+outputs/
+*.docx
+*.pptx
+
 # Local render/check artifacts
 qa_render*/
 outputs/manual-test/
 outputs/[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]-*/
+docx_render*/
+*.inspect.ndjson
+*_backup_before_*.docx
+ppt_rebuild*/

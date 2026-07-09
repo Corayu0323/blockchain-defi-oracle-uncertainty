@@ -15,10 +15,13 @@ contract SimpleLendingUSPL {
 
     uint256 public liquidationThresholdWad = 0.8e18;
     uint256 public liquidationBonusWad = 0.05e18;
+    // On-chain representation of an off-chain uncertainty estimate or governance
+    // risk parameter. Gas-heavy rolling statistics and scenario calibration are
+    // expected to happen off-chain; this contract executes the compact rule.
     uint256 public uncertaintyWidthWad = 0.04e18;
     uint256 public capMinWad = 0.05e18;
     uint256 public capMaxWad = 0.50e18;
-    uint256 public gammaWad = 4e18;
+    uint256 public falseLossBudgetWad = 0.005e18;
 
     event Deposited(address indexed borrower, uint256 amountEth);
     event Borrowed(address indexed borrower, uint256 amountUsdc);
@@ -76,25 +79,24 @@ contract SimpleLendingUSPL {
     }
 
     function closeCap(address borrower) public view returns (uint256) {
-        string memory z = zone(borrower);
-        bytes32 hashed = keccak256(bytes(z));
-        if (hashed == keccak256(bytes("safe"))) {
+        (uint256 priceLow, uint256 priceHigh) = _priceInterval();
+        uint256 hfMin = _healthFactor(borrower, priceLow);
+        uint256 hfMax = _healthFactor(borrower, priceHigh);
+
+        if (hfMin > WAD) {
             return 0;
         }
-        if (hashed == keccak256(bytes("liquidation"))) {
+        if (hfMax < WAD) {
             return capMaxWad;
         }
 
-        uint256 uncertaintyIntensityWad = 2 * uncertaintyWidthWad;
-        uint256 penalty = (gammaWad * uncertaintyIntensityWad) / WAD;
-        if (penalty >= capMaxWad) {
-            return capMinWad;
-        }
-        uint256 cap = capMaxWad - penalty;
-        if (cap < capMinWad) {
-            return capMinWad;
-        }
-        return cap;
+        uint256 unsafeProbabilityWad = _unsafeProbability(hfMin, hfMax);
+        uint256 solvencyCloseCapWad = _solvencyCloseCap(borrower, priceLow);
+        uint256 userCloseCapWad = _userCloseCap(unsafeProbabilityWad);
+
+        uint256 weightedSolvency = (unsafeProbabilityWad * solvencyCloseCapWad) / WAD;
+        uint256 weightedUser = ((WAD - unsafeProbabilityWad) * userCloseCapWad) / WAD;
+        return _clip(weightedSolvency + weightedUser, capMinWad, capMaxWad);
     }
 
     function liquidate(address borrower) external {
@@ -131,6 +133,57 @@ contract SimpleLendingUSPL {
         priceHigh = (price * (WAD + uncertaintyWidthWad)) / WAD;
     }
 
+    function _unsafeProbability(uint256 hfMin, uint256 hfMax) internal pure returns (uint256) {
+        if (hfMin >= WAD) {
+            return 0;
+        }
+        if (hfMax <= WAD) {
+            return WAD;
+        }
+        return ((WAD - hfMin) * WAD) / (hfMax - hfMin);
+    }
+
+    function _solvencyCloseCap(address borrower, uint256 priceLow) internal view returns (uint256) {
+        uint256 debt = debtUsdc[borrower];
+        if (debt == 0) {
+            return 0;
+        }
+
+        uint256 lowerBoundCollateralValue = (
+            ((collateralEth[borrower] * priceLow) / WAD) * liquidationThresholdWad
+        ) / WAD;
+        if (debt <= lowerBoundCollateralValue) {
+            return 0;
+        }
+
+        uint256 oraclePrice = _oraclePriceWad();
+        uint256 liquidationRatio = (
+            (((WAD + liquidationBonusWad) * priceLow) / WAD) * liquidationThresholdWad
+        ) / WAD;
+        uint256 denominatorRatio = (liquidationRatio * WAD) / oraclePrice;
+        if (denominatorRatio >= WAD) {
+            return capMaxWad;
+        }
+
+        uint256 denominator = (debt * (WAD - denominatorRatio)) / WAD;
+        if (denominator == 0) {
+            return capMaxWad;
+        }
+
+        uint256 cap = ((debt - lowerBoundCollateralValue) * WAD) / denominator;
+        return _clip(cap, 0, capMaxWad);
+    }
+
+    function _userCloseCap(uint256 unsafeProbabilityWad) internal view returns (uint256) {
+        uint256 falseStateWad = WAD - unsafeProbabilityWad;
+        uint256 denominator = (falseStateWad * liquidationBonusWad) / WAD;
+        if (denominator == 0) {
+            return capMaxWad;
+        }
+        uint256 cap = (falseLossBudgetWad * WAD) / denominator;
+        return _clip(cap, capMinWad, capMaxWad);
+    }
+
     function _healthFactor(address borrower, uint256 priceWad) internal view returns (uint256) {
         uint256 debt = debtUsdc[borrower];
         if (debt == 0) {
@@ -138,5 +191,15 @@ contract SimpleLendingUSPL {
         }
         uint256 collateralValue = (collateralEth[borrower] * priceWad) / WAD;
         return (collateralValue * liquidationThresholdWad) / debt;
+    }
+
+    function _clip(uint256 value, uint256 lower, uint256 upper) internal pure returns (uint256) {
+        if (value < lower) {
+            return lower;
+        }
+        if (value > upper) {
+            return upper;
+        }
+        return value;
     }
 }

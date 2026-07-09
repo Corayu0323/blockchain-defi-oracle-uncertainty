@@ -72,21 +72,13 @@ python3 src/uspl/run_demo.py
 
 该脚本输出 `outputs/demo_metrics.csv`、`outputs/demo_paths.png` 和 `outputs/mechanism_metrics.png`。其中，`demo_metrics.csv` 保存不同机制在各场景下的指标结果；`demo_paths.png` 展示市场价格、预言机价格、价格区间和健康因子区间；`mechanism_metrics.png` 展示不同机制在坏账、误清算损失、用户损失和清算延迟上的对比。
 
-参数敏感性分析代码位于 `src/uspl/sensitivity_analysis.py`，运行方式为：
-
-```bash
-python3 src/uspl/sensitivity_analysis.py
-```
-
-该脚本输出 `outputs/uspl_gamma_sensitivity.csv` 和 `outputs/uspl_gamma_sensitivity.png`，用于分析 `gamma` 参数对清算强度、误清算损失和坏账的影响。
-
 ### 5.2 Streamlit 展示
-项目还实现了一个 Streamlit 展示界面 `app/streamlit_app.py`。该界面支持调整价格场景、预言机延迟、区间宽度、`gamma`、`cap_min` 和 `cap_max` 等参数，并可视化价格路径、健康因子区间和清算事件。它主要用于交互式展示，帮助说明 USPL 机制在不同场景下的行为。
+项目还实现了一个 Streamlit 展示界面 `app/streamlit_app.py`。该界面支持调整价格场景、预言机延迟、区间宽度、误清算预算 `B`、`cap_min`、`cap_max` 和债务规模等参数，并即时调用同一套仿真核心，可视化价格路径、健康因子区间和清算事件。它主要用于交互式展示，帮助说明 USPL 机制在不同参数设定下的行为，不作为本文主实验的批量统计证据。
 
-### 5.3 Solidity 合约草案
-本文给出 Solidity 合约草案以说明 USPL 的链上可表达性。合约文件包括 `contracts/MockOracle.sol` 和 `contracts/SimpleLendingUSPL.sol`。其中，`MockOracle.sol` 用于模拟预言机价格更新；`SimpleLendingUSPL.sol` 实现抵押、借款、健康因子计算、价格区间、分区判断和清算函数。
+### 5.3 链下风险估计与链上执行层
+本文给出 Solidity 合约草案以说明 USPL 的链上执行层如何表达。合约文件包括 `contracts/MockOracle.sol` 和 `contracts/SimpleLendingUSPL.sol`。其中，`MockOracle.sol` 用于模拟预言机价格更新；`SimpleLendingUSPL.sol` 实现抵押、借款、健康因子计算、价格区间、分区判断和清算函数。
 
-需要说明的是，Python 仿真中的不确定性区间是动态计算的，而 Solidity 草案为了保持链上逻辑简洁，采用固定 `uncertaintyWidthWad` 表示价格区间宽度。也就是说，合约草案实现的是链上可执行的简化版本，而 Python 仿真承担主要实验分析功能。后续若要进一步工程化，可以将动态不确定性宽度设计为由链上波动统计、预言机更新时间差或外部风险参数共同决定。
+需要说明的是，Python 仿真与 Solidity 合约草案并非彼此替代的简化版本，而是对应 USPL 机制的链下风险估计层与链上执行层。Python 仿真用于计算动态不确定性宽度、开展历史回放和压力测试，并为参数选择提供依据；这类操作依赖历史窗口、波动统计和多场景模拟，若全部放在链上执行会显著增加 gas 成本。Solidity 合约则负责保存治理参数、表达价格区间和健康因子区间，并在清算触发时执行可验证的 close factor 规则。因此，合约中的 `uncertaintyWidthWad` 可理解为链下风险估计结果或治理风险参数的链上表示，而不是对 USPL 机制的削弱。后续工程化实现中，可以通过预言机、Keeper 或治理参数更新流程，将链下计算得到的动态不确定性宽度同步到链上，从而形成“链下估计—链上执行”的完整闭环。
 """
 
 
@@ -107,7 +99,7 @@ DIFFERENCE_SECTION = """
 
 第三，本文没有把边界状态简单处理为“可清算”或“不可清算”。当健康因子区间跨越清算边界时，账户风险具有不确定性。USPL 将该不确定性映射到最大清算比例，使清算机制从二元阈值判断扩展为清算强度调节问题。
 
-第四，本文通过 fixed、TWAP、buffer 和 USPL 的对照实验，以及 `gamma` 参数敏感性分析，展示不同机制在坏账风险、误清算损失和用户损失之间的权衡。本文的贡献不在于证明某一机制全场景最优，而在于给出一个可以复现实验、可以被合约表达、且便于讨论参数权衡的机制分析框架。
+第四，本文通过 fixed、TWAP、buffer 和 USPL 的对照实验，以及真实数据回放和反事实 oracle shock 压力场景，展示不同机制在坏账风险、误清算损失和用户损失之间的权衡。本文的贡献不在于证明某一机制全场景最优，而在于给出一个可以复现实验、可以被合约表达、且便于讨论参数权衡的机制分析框架。
 """
 
 
@@ -154,12 +146,12 @@ src/uspl/run_demo.py               机制对比实验脚本
 src/uspl/sensitivity_analysis.py   参数敏感性分析脚本
 app/streamlit_app.py               Streamlit 可视化展示
 contracts/MockOracle.sol           模拟预言机合约
-contracts/SimpleLendingUSPL.sol    USPL 简化借贷合约
+contracts/SimpleLendingUSPL.sol    USPL 链上执行层合约草案
 outputs/demo_metrics.csv           机制对比指标
 outputs/demo_paths.png             价格路径与健康因子图
 outputs/mechanism_metrics.png      机制指标对比图
-outputs/uspl_gamma_sensitivity.csv gamma 敏感性指标
-outputs/uspl_gamma_sensitivity.png gamma 敏感性图
+outputs/uspl_budget_sensitivity.csv B 敏感性指标
+outputs/uspl_budget_sensitivity.png B 敏感性图
 ```
 
 复现实验的主要命令如下：
@@ -339,16 +331,16 @@ def prepare_markdown() -> str:
         "本文方案的核心机制框架如图 1 所示。与工程实现图不同，该图只保留论文分析中最关键的三层关系：预言机价格不确定性的来源、USPL 的区间化风险识别与清算比例调节，以及最终风险结果。这样可以突出本文的机制分析重点，而不是展示完整智能合约调用细节。",
     )
     text = text.replace(
-        "这说明 USPL 的参数不能依赖主观设定，也不能通过反复调参追求单一场景下的最优结果。更合理的做法是在后续研究中引入参数校准机制：先定义协议侧坏账损失和用户侧误清算损失的综合目标函数，在历史校准样本中选择 `gamma`、`cap_min` 和 `cap_max`，再在独立压力场景中检验机制效果。本文课程阶段仅进行敏感性分析，不将自动调参作为已完成贡献。",
-        "这说明 USPL 的参数不能依赖主观设定，也不能通过反复调参追求单一场景下的最优结果。更合理的做法是在后续研究中引入参数校准机制：先定义协议侧坏账损失和用户侧误清算损失的综合目标函数，在历史校准样本中选择 `gamma`、`cap_min` 和 `cap_max`，再在独立压力场景中检验机制效果。本文仅进行敏感性分析，不将自动调参作为已完成贡献。",
+        "这说明 USPL 的参数不能依赖主观设定，也不能通过反复调参追求单一场景下的最优结果。更合理的做法是在后续研究中引入参数校准机制：先定义协议侧坏账损失和用户侧误清算损失的综合目标函数，在历史校准样本中选择 `B`、`cap_min` 和 `cap_max`，再在独立压力场景中检验机制效果。本文课程阶段仅进行敏感性分析，不将自动调参作为已完成贡献。",
+        "这说明 USPL 的参数不能依赖主观设定，也不能通过反复调参追求单一场景下的最优结果。更合理的做法是在后续研究中引入参数校准机制：先定义协议侧坏账损失和用户侧误清算损失的综合目标函数，在历史校准样本中选择 `B`、`cap_min` 和 `cap_max`，再在独立压力场景中检验机制效果。本文仅进行敏感性分析，不将自动调参作为已完成贡献。",
     )
     text = text.replace(
         "本文已实现课程级原型，包括：",
         "本文已实现简化实验原型，包括：",
     )
     text = text.replace(
-        "该 MVP 不依赖真实主网部署，适合课程展示和机制说明。",
-        "该 MVP 不依赖真实主网部署，适合进行机制展示、参数对比和风险分析。",
+        "该课程原型不依赖真实主网部署，适合课程展示和机制说明。",
+        "该原型不依赖真实主网部署，适合进行机制展示、参数对比和风险分析。",
     )
     text = text.replace(
         "本文围绕 DeFi 抵押借贷中的预言机驱动清算问题，分析了坏账风险和误清算风险之间的机制冲突，并提出了 USPL 不确定性缩放部分清算机制。该机制将预言机价格从单点估计扩展为价格区间，并进一步计算健康因子区间，在不确定区中根据预言机不确定性动态限制最大清算比例。",
